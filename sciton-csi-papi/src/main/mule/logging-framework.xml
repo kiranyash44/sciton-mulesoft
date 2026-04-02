@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+ xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+ <sub-flow name="log-processing-flow" doc:id="fc94eaa1-3c0f-4daf-8ead-d8f30fe4e7a5" >
+		<choice doc:name="Choice" doc:id="1c9f96f6-b31b-481e-9f55-176454e3292d" >
+			<when expression='#[vars.logger.logLevel == "INFO"]'>
+				<logger level="INFO" doc:name="Logger-INFO" doc:id="bb3659e1-e090-4337-bb98-154ada5221f3" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10; correlationId : vars.logger.correlationId,&#10; tracePoint: vars.logger.tracePoint,&#10; flow: vars.logger.flow,&#10; message : vars.logger.message default "",&#10; source : vars.logger.source default "",&#10; target : vars.logger.target default "",&#10; timeStamp : now(), &#10; additionalInfo : vars.logger.additionalInfo default "No additional Infomation available to log"&#10;}]' category="#[vars.logger.category]" />
+			</when>
+			<when expression='#[vars.logger.logLevel == "WARN"]'>
+				<logger level="WARN" doc:name="Logger-WARN" doc:id="06457e29-637a-4d65-9f8b-e5796b787a5f" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10; correlationId : vars.logger.correlationId,&#10; tracePoint: vars.logger.tracePoint,&#10; flow: vars.logger.flow,&#10; message : vars.logger.message default "",&#10; source : vars.logger.source default "",&#10; target : vars.logger.target default "",&#10; timeStamp : now(), &#10; additionalInfo : vars.logger.additionalInfo default "No additional Infomation available to log"&#10;}]' category="#[vars.logger.category]" />
+			</when>
+			<when expression='#[vars.logger.logLevel == "DEBUG"]'>
+				<logger level="DEBUG" doc:name="Logger-DEBUG" doc:id="e87aa760-7f1e-4107-ba2d-035911ec5d69" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10; correlationId : vars.logger.correlationId,&#10; tracePoint: vars.logger.tracePoint,&#10; flow: vars.logger.flow,&#10; message : vars.logger.message default "",&#10; source : vars.logger.source default "",&#10; target : vars.logger.target default "",&#10; timeStamp : now(), &#10; additionalInfo : vars.logger.additionalInfo default "No additional Infomation available to log",&#10;    (payload : payload) if(payload != "" and payload != null)&#10;}]' category="#[vars.logger.category]" />
+			</when>
+			<when expression='#[vars.logger.logLevel == "ERROR"]'>
+				<logger level="ERROR" doc:name="Logger-ERROR" doc:id="498e8c83-e426-4150-a474-797c78ec4007" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10; correlationId : vars.logger.correlationId,&#10; tracePoint: vars.logger.tracePoint,&#10; flow: vars.logger.flow,&#10; errorCode: vars.logger.errorCode,&#10; errorMessage : vars.logger.errorMessage default "",&#10; source : vars.logger.source default "",&#10; target : vars.logger.target default "",&#10; timeStamp : now(), &#10; additionalInfo : vars.logger.additionalInfo default "No additional Infomation available to log"&#10;}]' category="#[vars.logger.category]" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger-INFO" doc:id="aa57f8a6-7820-433c-9a9d-ec753eae6f54" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10; correlationId : vars.logger.correlationId,&#10; tracePoint: vars.logger.tracePoint,&#10; flow: vars.logger.flow,&#10; message : vars.logger.message default "",&#10; source : vars.logger.source default "",&#10; target : vars.logger.target default "",&#10; timeStamp : now(), &#10; additionalInfo : vars.logger.additionalInfo default "No additional Infomation available to log"&#10;}]' category="#[vars.logger.category]" />
+			</otherwise>
+		</choice>
+ </sub-flow> 
+
+</mule>
+ 

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="d0dac370-33b2-4e45-a6e7-d22aa82cc472" >
+		<salesforce:basic-connection username="sakshi.shripanavar@yash.com.awcpoc" password="Omsairam@200" securityToken="k3g0c6bJzItNeFslp0k0gFlA" />
+	</salesforce:sfdc-config>
+	<flow name="platform-return-order-event-creation-implflow" doc:id="5a62281f-5ac1-40bf-ab7e-9005ffca9582" >
+		<salesforce:subscribe-channel-listener streamingChannel="/event/Return_Order_Status_Change__e" doc:name="subscribeReturnOrderChannelListener" doc:id="51a613c1-fade-4b6e-8a6a-e74eb0189c21" config-ref="Salesforce_Config"/>
+		<logger level="INFO" doc:name="startLogger" doc:id="7ded0ffa-e988-4242-8bb1-4305acc55c0e" message="return order event flow started::::#[payload]"/>
+		<ee:transform doc:name="setResponse" doc:id="a45a5599-6252-4ecb-bec9-eaa0a98184b7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="c89ad67c-d384-43bb-8e28-fcd7bbaafd52" message="return order event flow ended::::#[payload]" />
+	</flow>
+	<flow name="platform-return-order-item-event-creation-implflow" doc:id="9804c166-efd5-49c5-b268-42b119f37b68" >
+		<salesforce:subscribe-channel-listener doc:name="subscribeReturnOrderLineItemChannelListener" doc:id="14079928-48af-418e-bc14-bdc24c18107b" config-ref="Salesforce_Config" streamingChannel="/event/Return_Order_Line_Item_Status_Change__e"/>
+		<logger level="INFO" doc:name="startLogger" doc:id="4f89af8b-a2c6-4520-b205-9cdd18269c93" message="return order item event flow started::::#[payload]" />
+		<ee:transform doc:name="setResponse" doc:id="8f5bbfb0-36c0-4bfd-8914-900eb1e8624b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="9aa7e930-9207-4027-b79d-64f4f8cebfcf" message="return order item event flow ended::::#[payload]" />
+		<error-handler ref="error-handling-papi" />
+	</flow>
+	<flow name="platform-service-territory-item-event-creation-implflow" doc:id="a7790248-8dda-4b58-9503-ecb97f768ec8" >
+		<logger level="INFO" doc:name="startLogger" doc:id="75a69181-9619-403e-a502-325000fa45ec" message="return service territory event flow started::::#[payload]" />
+		<ee:transform doc:name="setResponse" doc:id="32ae3657-78b4-46cb-b374-ea29e0f599d9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="8a44b847-0506-4457-88c8-a379000e6d61" message="return service territory event flow ended::::#[payload]" />
+		<error-handler ref="error-handling-papi" />
+	</flow>
+</mule>

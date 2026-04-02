@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<http:listener-config name="sciton-sfdc-sapi-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="sciton-sfdc-sapi-config" api="sciton-sfdc-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="9354449e-9576-4311-9443-c04563e071ed" >
+		<salesforce:basic-connection username="harsh.suri@yash.com.awpoc" password="SalesForce@hh3" securityToken="sO26RZPDKaNV00kwehMqeO8jI" />
+	</salesforce:sfdc-config>
+	<salesforce:sfdc-config
+		name="Salesforce_Config_Sciton" doc:name="Salesforce Config"
+		doc:id="f7973776-7aa6-4c23-a5d0-a2e31dfd7f3f">
+		<salesforce:oauth-client-credentials-connection>
+			<salesforce:oauth-client-credentials
+				clientId="3MVG90M53M443DSGu9NvTnP8f9OFEWS520lgaZauOzL5CD9en97D_UB4aWq.jy3xcG4TYI0izwKcIVFgZe6Kb"
+				clientSecret="3567E1EE2A0BEFF0009AB2C839F1ECD967995F23195734E7B110A994C0944D99"
+				tokenUrl="https://sciton--mulfsldev.sandbox.my.salesforce.com/services/oauth2/token" />
+		</salesforce:oauth-client-credentials-connection>
+	</salesforce:sfdc-config>
+	<flow name="configFlow" doc:id="3ad434e3-6386-4634-9436-96845d0db6d7" >
+		<salesforce:replay-channel-listener doc:name="Replay channel listener" doc:id="b5377980-ef0e-45a7-be34-baf6b2fb59d6" config-ref="Salesforce_Config_Sciton" streamingChannel="/event/MuleRequest (Mulerequest__e)" replayOption="ONLY_NEW"/>
+		<salesforce:create doc:name="Create" doc:id="7eb4d020-5c15-426f-8b99-8b342abcacaf" config-ref="Salesforce_Config_Sciton" type="Mulerequest__e"/>
+	</flow>
+ 
+</mule>

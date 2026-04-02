@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<sub-flow name="sfdc-get-impl-sub-flow" doc:id="e3ebca33-22e6-46d1-b439-b6a99771bbf3" >
+		<ee:transform doc:name="setLogVariables" doc:id="88d658ba-3dbb-4fb9-b0da-8420e393483d" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="logger" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton account get flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {customerId: vars.customerId},
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="d8e0baa2-19f5-4687-8945-7b1438b5d057" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="f3b5cbad-f8e5-485f-98d4-69e3f9e1daf4" name="log-processing-flow" target="logResponse"/>
+		<ee:transform doc:name="setRequest" doc:id="abac0749-e7e8-4c11-8ea5-575a37a7e8cd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"query": "Select Id,Name, Industry, Type,BillingAddress, ShippingAddress,Phone,website From",
+	"payload": "where Id='"  ++ vars.customerId ++ "'",
+	"objectName": "Account"
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="method" ><![CDATA["GET"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="sfdc-common-api-subflow" doc:id="0a92c2e6-3433-4c76-b922-8084fdd8f87f" name="sfdc-common-api-subflow"/>
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="05c80142-1892-4782-bd53-5ef316dd5f55" />
+		<ee:transform doc:name="setLogVariables" doc:id="e54b3bb3-6d03-49ca-b977-f6c7fd173343" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="logger" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "End",
+	flow: flow.name,
+	message : "Sciton get flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : {targetResponse:payload},
+	logLevel: p('logLevel'),
+	status: "Completed"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="17122f70-03a3-44ec-a9de-41e5e03ca835" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+		<flow-ref doc:name="log-processing-flow" doc:id="67583879-5da8-46a1-9eaf-85ca35be1861" name="log-processing-flow" target="logResponse"/>
+	</sub-flow>
+	<sub-flow name="sfdc-common-api-subflow" doc:id="a0c4e347-3391-4b3a-b406-a3e8ca2d3236" >
+		<ee:transform doc:name="setLogVariables" doc:id="2e3a7c03-fd8f-42c6-94eb-bc8c81f668b4">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Middle",
+	flow: flow.name,
+	message : "Sciton common flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : "common flow to call SFDC system api Started",
+	logLevel: p('logLevel'),
+	status: "In Progress"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="b53817a9-12d8-4308-8a4a-c0e122fce3c7" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="c3f9b774-d1c6-4e58-b08b-2168eeaf61ad" name="log-processing-flow" target="logResponse"/>
+		<until-successful maxRetries="3" doc:name="Until Successful" doc:id="b917bd39-497e-40c1-8e78-177a6c290c07" millisBetweenRetries="3000">
+			<try doc:name="Try" doc:id="5c150658-7fb6-444d-bf64-f7d73b5b14d6">
+			<http:request method="#[vars.method]" doc:name="sfdcSapiRequest" doc:id="47d8d738-54be-4929-a8e7-baf4370037aa" url="#[vars.url]" sendBodyMode="ALWAYS">
+			<http:body><![CDATA[#[output json
+---
+payload]]]></http:body>
+					<http:headers ><![CDATA[#[{
+	"correlationId": vars.correlationId
+}]]]></http:headers>
+		</http:request>
+				<error-handler >
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7c3268f5-2139-4e48-b13d-d440b8efd63c" type="HTTP:CONNECTIVITY" >
+						<logger level="ERROR" doc:name="errorStartLogger" doc:id="4db7116d-3b48-4b60-b0c3-822d47a6270a" message="Connectivity HTTP error flow started::::#[vars.correlationId]" />
+						<ee:transform doc:name="errorResponse" doc:id="2f1febfe-f93d-4d88-9c60-bd380dadb20c" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "HTTP-500",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent
+}]]></ee:set-payload>
+							</ee:message>
+							<ee:variables >
+							</ee:variables>
+						</ee:transform>
+						<logger level="ERROR" doc:name="errorEndLogger" doc:id="1c81b75c-e84b-49a4-9897-21eccec3d3f6" message="Connectivity HTTP error flow ended::::#[payload] || #[vars.correlationId]" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="54b689d2-ba6f-46e2-947b-158cc1eb51bf" type="ANY" >
+						<logger level="ERROR" doc:name="errorStartLogger" doc:id="0d3d1c08-e888-48f2-9efe-cbacd6136f2b" message="Other HTTP error flow started::::#[vars.correlationId]" />
+						<ee:transform doc:name="errorResponse" doc:id="1f853bfc-2ecb-4ac0-92a4-7ddf495245b4" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "HTTPANY-500",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent
+}]]></ee:set-payload>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+error]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="ERROR" doc:name="errorEndLogger" doc:id="a674c286-57e3-4299-b7f8-28deb8de131a" message="Other HTTP error flow ended::::#[vars.errorResponse] || #[vars.correlationId]" />
+					</on-error-continue>
+				</error-handler>
+		</try>
+		</until-successful>
+		<validation:is-true doc:id="06addaf1-1519-449e-b904-ceed60a58881" expression="#[vars.errorResponse == null]" message="#[vars.errorResponse.errorMessage.payload.description default error.description]" doc:name="Check for errors other than connectivity errors" />
+		<logger level="INFO" doc:name="endSapiLogger" doc:id="4dd211ac-b2c1-42ed-8838-5a3725ac7380" message="sfdc sys api end:: #[vars.correlationId]" />
+		<ee:transform doc:name="setLogVariables" doc:id="8e79a76e-a3b3-4ed2-b48f-6a6e48ed18ad" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="logger" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Middle",
+	flow: flow.name,
+	message : "Sciton common flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : "common flow to call SFDC system api Ended",
+	logLevel: p('logLevel'),
+	status: "In Progress"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="84d5705b-c684-4129-bb0a-f32e139e9de1" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="0489d8b7-ca4e-49a4-91c3-2fd4bc6f6014" name="log-processing-flow" target="logResponse"/>
+	</sub-flow>
+	<sub-flow name="sfdc-create-impl-sub-flow" doc:id="238620ca-99fe-41be-85ec-e94224a26f7a" >
+		<ee:transform doc:name="setLogVariables" doc:id="c70e34dd-475c-4e59-b5be-0c63efd3e6d3">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton account create flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {requestPayload: payload},
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="abe9958f-ed4e-4aa2-b6a9-19be0f3fe666" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="5f47160a-622a-450c-86fb-a0fb55e7a4ac" name="log-processing-flow" target="logResponse"/>
+		<ee:transform doc:name="setRequest" doc:id="a86c05b1-3230-41ac-8ad8-8fe63679b1ee" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="method" ><![CDATA["POST"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="sfdc-common-api-subflow" doc:id="06ee138f-c7f8-402d-ac9f-8ce5bc2af37e" name="sfdc-common-api-subflow" />
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="e64ba1ed-69b9-4d7c-b841-4884a612b2f8" />
+		<ee:transform doc:name="setResponse" doc:id="acce0fa3-600c-4544-a90d-f8a1882aad9c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    accountId: payload.items.id[0],
+    status: "Completed",
+    message: "Account Created Successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="setLogVariables" doc:id="edfb79eb-10b9-46ff-a76c-62f451d4610e">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "End",
+	flow: flow.name,
+	message : "Sciton account create flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : {targetResponse:payload},
+	logLevel: p('logLevel'),
+	status: "Completed"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="5ebaf477-1133-4a1c-b748-120113768da9" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="3e72ba90-b8ad-4e97-8496-2a4852e9e720" name="log-processing-flow" target="logResponse"/>
+	</sub-flow>
+	<sub-flow name="sfdc-update-impl-sub-flow" doc:id="76e750db-9502-467a-88ef-3ac9a961bbf9" >
+		<ee:transform doc:name="setLogVariables" doc:id="4e8383ff-dabf-454f-ac7f-2fc15e2a9f18">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton account update flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {requestPayload: payload},
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="c2104c1d-ba35-46a5-bfae-50fba320bc39" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="4c6738cc-ecc0-4373-8ac9-e75f9e00ae8f" name="log-processing-flow" target="logResponse"/>
+		<ee:transform doc:name="setRequest" doc:id="6ab89252-afe6-49f5-9ace-a7d927fa606e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	query: payload.query,
+	payload: payload.payload map {
+        "Industry": $.Industry,
+        "Type": $.Type,
+        "Phone": $.Phone,
+        "BillingCountry": $.BillingCountry,
+        "BillingCity": $.BillingCity,
+        "BillingStreet": $.BillingStreet,
+        "BillingLatitude": $.BillingLatitude,
+        "BillingPostalCode": $.BillingPostalCode,
+        "BillingGeocodeAccuracy": $.BillingGeocodeAccuracy,
+        "BillingState": $.BillingState,
+        "BillingLongitude": $.BillingLongitude,
+        "Website": $.Website,
+        "ShippingCountry": $.ShippingCountry,
+        "ShippingCity": $.ShippingCity,
+        "ShippingStreet": $.ShippingStreet,
+        "ShippingLatitude": $.ShippingLatitude,
+        "ShippingPostalCode": $.ShippingPostalCode,
+        "ShippingGeocodeAccuracy": $.ShippingGeocodeAccuracy,
+        "ShippingState": $.ShippingState,
+        "ShippingLongitude": $.ShippingLongitude,
+        "Name": $.Name,
+        "Id": vars.customerId.Id
+    },
+	objectName: payload.objectName
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="method" ><![CDATA["PUT"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="sfdc-common-api-subflow" doc:id="8ab20d4e-fe2b-487e-876f-dbaeed9b0f23" name="sfdc-common-api-subflow" />
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="99caa433-7dc0-4d41-9754-b113bbc77a12" />
+		<ee:transform doc:name="setResponse" doc:id="50942e25-c9af-4ad3-9623-5db84f353e24">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    accountId: payload.items.id[0],
+    status: "Completed",
+    message: "Account Updated Successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="setLogVariables" doc:id="05b32867-9d3a-42b0-adc1-1eb278622404">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "End",
+	flow: flow.name,
+	message : "Sciton account update flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : {targetResponse:payload},
+	logLevel: p('logLevel'),
+	status: "Completed"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="5a6c0e04-dcae-48f5-abb5-2455a28a155b" name="create-Record-process-flow" target="sfdcrecordResponse" />
+		<flow-ref doc:name="log-processing-flow" doc:id="a65a9b4b-038e-49e3-b359-8a12a45b9fc9" name="log-processing-flow" target="logResponse"/>
+	</sub-flow>
+</mule>

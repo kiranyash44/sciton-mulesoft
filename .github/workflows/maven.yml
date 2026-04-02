@@ -1,0 +1,155 @@
+name: Deploy Mule Applications to CloudHub 2.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Select the app folder(s) to deploy (comma-separated, e.g., app-a,app-b)'
+        required: false
+        type: string
+      environment:
+        description: 'Target environment (Dev, Prod)'
+        required: true
+        default: 'Dev'
+        type: choice
+        options:
+          - Dev
+          - SIT
+          - UAT
+          - Prod
+
+env:
+  DEFAULT_APPS: 'sciton-fsl-papi-v1,sciton-csi-sapi-v1,sciton-sfdc-sapi-v1'
+  
+jobs:
+
+  set-apps:
+    runs-on: ubuntu-latest
+    outputs:
+      selected_apps: ${{ steps.set.outputs.selected_apps }}
+      github_env: ${{ steps.env.outputs.github_env }}
+      mule_env: ${{ steps.env.outputs.mule_env }}
+      cloudhub_env: ${{ steps.env.outputs.cloudhub_env }}
+      cloudhub_target: ${{ steps.env.outputs.cloudhub_target }}
+      app_version: ${{ steps.set_versions.outputs.app_version }}
+      app_env: ${{ steps.env.outputs.app_env }}
+
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+          
+      - name: Set app from workflow_dispatch input or default
+        id: set
+        run: |
+          if [ -z "${{ github.event.inputs.app }}" ]; then
+            clean_input="${{ env.DEFAULT_APPS }}"
+          else
+            clean_input="${{ github.event.inputs.app }}"
+          fi
+          clean_input=$(echo "$clean_input" | tr -d '[:space:]')
+          json_array="[\"$(echo "$clean_input" | sed 's/,/","/g')\"]"
+          echo "selected_apps=$json_array" >> "$GITHUB_OUTPUT"
+
+      - name: Map environment settings
+        id: env
+        run: |
+          ENV_INPUT="${{ github.event.inputs.environment || 'Dev' }}"
+          if [ "$ENV_INPUT" = "Dev" ]; then
+            # Matches GitHub workflow dropdown option
+            echo "github_env=Dev" >> $GITHUB_OUTPUT
+            # Matches environment name in Anypoint Platform
+            echo "cloudhub_env=Dev" >> $GITHUB_OUTPUT
+            # Matches target from Anypoint Platform
+            echo "cloudhub_target=ps-sandbox-east-1" >> $GITHUB_OUTPUT
+            # Matches suffix for app names
+            echo "app_env=-dev" >> $GITHUB_OUTPUT
+            # Matches config properties yaml file name
+            echo "mule_env=dev" >> $GITHUB_OUTPUT
+          elif [ "$ENV_INPUT" = "Uat" ]; then
+            echo "github_env=Uat" >> $GITHUB_OUTPUT
+            echo "cloudhub_env=Uat" >> $GITHUB_OUTPUT
+            echo "cloudhub_target=ps-sandbox-east-1" >> $GITHUB_OUTPUT
+            echo "app_env=-uat" >> $GITHUB_OUTPUT
+            echo "mule_env=uat" >> $GITHUB_OUTPUT
+          elif [ "$ENV_INPUT" = "SIT" ]; then
+            echo "github_env=SIT" >> $GITHUB_OUTPUT
+            echo "cloudhub_env=Sit" >> $GITHUB_OUTPUT
+            echo "cloudhub_target=ps-sandbox-east-1" >> $GITHUB_OUTPUT
+            echo "app_env=-sit" >> $GITHUB_OUTPUT
+            echo "mule_env=sit" >> $GITHUB_OUTPUT
+          else
+            echo "github_env=Prod" >> $GITHUB_OUTPUT
+            echo "cloudhub_env=Prod" >> $GITHUB_OUTPUT
+            echo "cloudhub_target=ps-prod-east-1" >> $GITHUB_OUTPUT
+            echo "app_env=""" >> $GITHUB_OUTPUT
+            echo "mule_env=prod" >> $GITHUB_OUTPUT
+           fi
+
+        shell: bash
+  set-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+    steps:
+      - name: Set version
+        id: set
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          BUILD_NUM=${{ github.run_number }}
+          if [[ "$ENV" == "Dev" || "$ENV" == "Sit" || "$ENV" == "Uat" ]]; then
+            VERSION="1.0.${BUILD_NUM}-SNAPSHOT"
+          else
+            VERSION="1.0.${BUILD_NUM}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-
+
+
+  
+  deploy-apps-commons:
+    needs: 
+      - set-apps
+      - set-version
+    
+    runs-on: ubuntu-latest
+    environment: ${{ needs.set-apps.outputs.github_env }}
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.set-apps.outputs.selected_apps) }}
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Replace credentials in settings.xml
+        env:
+          CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          sed -i "s|__ANYPOINT_CLIENT_ID__~?~__ANYPOINT_CLIENT_SECRET__|${CLIENT_ID}~?~${CLIENT_SECRET}|g" -s .github/maven/settings.xml
+
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-
+
+      - name: Deploy to CloudHub 2.0
+        run: |
+          cd  ${{ matrix.app }}
+          mvn -B -ntp -T2C versions:set -DnewVersion=$VERSION -s ../.github/maven/settings.xml
+          mvn -B -ntp -T2C clean deploy -Dproject.version=$VERSION -DskipMunitTests -s ../.github/maven/settings.xml && mvn -B -ntp -T1C clean deploy -P${{ needs.set-apps.outputs.mule_env }} -Dproject.version=$VERSION -DmuleDeploy -Dmule.env=${{ needs.set-apps.outputs.mule_env }} -Dcloudhub.environment=${{ needs.set-apps.outputs.cloudhub_env }}  -DskipMunitTests -s ../.github/maven/settings.xml || exit 1
+        env:
+          VERSION: ${{ needs.set-version.outputs.version }}

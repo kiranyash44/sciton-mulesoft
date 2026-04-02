@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<sub-flow name="sfdc-get-impl-subflow" doc:id="a9a53eaf-4a1d-4041-889f-faab5f609c09" >
+		<logger level="INFO" doc:name="startLogger" doc:id="f942399a-02cd-4713-97a2-95f1724267f0" message="CorrelationID: #[attributes.headers.correlationId] Start fetching data flow from ::#[payload.objectName]" />
+		<ee:transform doc:name="setQuery" doc:id="8a7668e8-2e5e-47ff-86f4-b48aa569cefd" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="getQuery" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.query ++ " " ++ payload.objectName ++ " " ++ (payload.payload default '')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="df0608fe-80fb-45a2-b6b1-3e591715c9de" >
+			<try doc:name="Try" doc:id="dae46e7e-fbe0-4b1f-9331-70753654ca5f">
+				<salesforce:query doc:name="getQuery" doc:id="fbc61355-177d-4fbc-9f8f-9dd2fa5f55a8" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[#[vars.getQuery]]]></salesforce:salesforce-query>
+		</salesforce:query>
+				<error-handler >
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="62f14857-2958-47a9-94cf-de986d604d3b" type="SALESFORCE:CONNECTIVITY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="d76c39aa-2fb8-46d5-9518-806653320106" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="982a3188-a870-4ab5-8a73-50e1e1862a09" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="ab92beb9-5296-4ece-96b7-1a4c238d07f7" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow ended::::#[payload]" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="a58ab1bd-437a-41eb-9e3d-0bd1d58fcb11" type="ANY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="7b47374c-e600-4926-a30d-22c6623e6dae" message="CorrelationID: #[attributes.headers.correlationId] Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="8ea04aca-2ac7-4c4c-a384-4bb2acedd3de" >
+							<ee:message >
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="27cb560d-6452-4f9d-a019-539aabbe261d" message="CorrelationID: #[attributes.headers.correlationId] Other SFDC error flow ended::::#[vars.errorResponse]" />
+					</on-error-continue>
+				</error-handler>
+		</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="3fa1db1f-d54e-4491-a0ae-72b388b825a3" expression="#[vars.errorResponse == null]" message="#[vars.errorResponse.errorMessage default error.description]" />
+		<ee:transform doc:name="setResponse" doc:id="c6882a91-a9d3-492c-a92a-7b46685911ae" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="df792aa6-7622-43e1-bec7-b87c171bd997" message="CorrelationID: #[attributes.headers.correlationId] End flow fetching data ::#[sizeOf(payload)]" />
+	</sub-flow>
+	<sub-flow name="sfdc-create-impl-subflow" doc:id="871433a5-1a98-4a89-9d12-b17516be6853" >
+		<logger level="INFO" doc:name="startLogger" doc:id="c244bb95-5cc7-4d76-88eb-7122960f29aa" message="CorrelationID: #[attributes.headers.correlationId] Start create record flow from ::#[payload.objectName]" />
+		<ee:transform doc:name="setRequest" doc:id="48afb147-0ea9-4bb5-9548-68516fcd5905" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="objectName" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.objectName]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="44f105ec-ecfc-4186-9472-709017ac42c6">
+			<try doc:name="Try" doc:id="41a33e50-8872-4ae8-85df-daff1e231efc">
+				<salesforce:create type="#[vars.objectName]" doc:name="createRecord" doc:id="8538176d-ddfb-4b08-b602-0f21e527d72a" config-ref="Salesforce_Config"/>
+				<error-handler>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f26d38e4-dc8d-45fe-bab3-0b7c123a49b3" type="SALESFORCE:CONNECTIVITY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="392338bd-39bc-4d79-ba48-a20daae60550" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="06298ee9-11b9-4281-8a6d-5feb8c2d3bbf">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="68cd9736-8482-47d2-b861-b719ded5c83d" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow ended::::#[payload]" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0cf22b40-497d-4e12-a46b-6b94b70a126c" type="ANY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="4ea0f8a7-383e-4b29-8629-fc94325b954d" message="CorrelationID: #[attributes.headers.correlationId] Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="2274967f-1ab0-4710-827b-c91bfbd70ec6">
+							<ee:message>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="8db35fd7-ff2b-4209-a0bd-9500acccc4ba" message="CorrelationID: #[attributes.headers.correlationId] Other SFDC error flow ended::::#[payload]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="23e12d71-dc33-479c-b218-95227c3f2158" expression="#[vars.errorResponse == null]" message="#[vars.errorResponse.errorMessage default error.description]" />
+		<ee:transform doc:name="setResponse" doc:id="c33f3e40-52d7-4993-996c-f61706d1c34d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="1102e2c8-5d39-4d11-8109-d10f85da4c5e" message="CorrelationID: #[attributes.headers.correlationId] End flow create record successfully ::#[sizeOf(payload)]" />
+	</sub-flow>
+	<sub-flow name="sfdc-update-impl-subflow" doc:id="20391eef-e79b-4454-976d-745e6ff240c9" >
+		<logger level="INFO" doc:name="startLogger" doc:id="f2922bae-e526-4ea6-8ff1-d474fae53b8b" message="CorrelationID: #[attributes.headers.correlationId] Start update record flow from ::#[payload.objectName]" />
+		<ee:transform doc:name="setRequest" doc:id="4e78454a-53b8-48e8-9c10-66cc985624ca" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="objectName" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.objectName]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="62870577-d3e9-4917-8b7d-4e78497e42f1">
+			<try doc:name="Try" doc:id="23534827-c453-4ee3-805b-17b49355c05e">
+				<salesforce:update type="#[vars.objectName]" doc:name="updateRecord" doc:id="58c92846-ac08-46c8-b9ed-dd9efe9f582b" config-ref="Salesforce_Config"/>
+				<error-handler>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9538dd99-e290-41e2-9ee8-f4bc536b0bfe" type="SALESFORCE:CONNECTIVITY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="454832df-08d1-4966-8345-33a5d638b85a" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="f5a839ac-1569-40e3-acaa-05da0004fb63">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="fb44eeee-5b11-4841-b70f-c42bb2153de6" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow ended::::#[payload]" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="347d1647-0055-4f88-845f-491c949cd7f2" type="ANY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="252b1038-9bba-4078-adb0-078f08263a11" message="CorrelationID: #[attributes.headers.correlationId] Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="15695a69-e613-488c-8cb1-6c0d8f49fa0b">
+							<ee:message>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="54a5f8fc-ab74-4732-89d1-3314cbc4d69d" message="CorrelationID: #[attributes.headers.correlationId] Other SFDC error flow ended::::#[payload]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="667e3f32-23d6-4876-a30b-2c1804b081e4" expression="#[vars.errorResponse == null]" message="#[vars.errorResponse.errorMessage default error.description]" />
+		<ee:transform doc:name="setResponse" doc:id="2bb81eae-43eb-4985-bc08-528c589c6fb5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="1d201236-e938-4d95-89eb-33c7575ed1d4" message="CorrelationID: #[attributes.headers.correlationId] End flow update record successfully ::#[sizeOf(payload)]" />
+	</sub-flow>
+	<sub-flow name="sfdc-delete-impl-subflow" doc:id="22fce75f-090e-4381-885c-c0d5266b3cf3" >
+		<logger level="INFO" doc:name="startLogger" doc:id="737b0834-e178-4551-ba3c-0338d32f4c00" message="CorrelationID: #[attributes.headers.correlationId] Start delete record flow from ::#[payload.objectName]" />
+		<set-payload value="#[[payload.payload]]" doc:name="setPayload" doc:id="ff882c85-6b2b-4e98-a81b-d0d4d9a8bc44" />
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="160e4d0d-5941-4496-a617-c0efaed25c9c">
+			<try doc:name="Try" doc:id="21f07fcd-cbfa-4f6a-bd46-79adb1235060">
+				<salesforce:delete doc:name="deleteRecord" doc:id="344c24eb-da4e-42b2-ac4f-9eeb12648ce8" config-ref="Salesforce_Config"/>
+				<error-handler>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c6e90474-f194-4243-be71-6736f534d63c" type="SALESFORCE:CONNECTIVITY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="2248e03f-169c-4075-8768-e1e74d570514" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="ac774bee-c784-4941-a5e2-2734a25ed453">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="e28c9ed9-a2a6-4bb7-9855-334fc7c5fd79" message="CorrelationID: #[attributes.headers.correlationId] Connectivity sfdc error flow ended::::#[payload]" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="41d59f8e-eb43-40b4-82e7-de90c87cfaa1" type="ANY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="0ad53df5-329f-49da-a9e5-7587f56091df" message="CorrelationID: #[attributes.headers.correlationId] Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="3399f9b7-425f-4f82-858a-69247c2c1b6f">
+							<ee:message>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="a42c73f7-57c5-4a2b-9f54-b02b8d30acd7" message="CorrelationID: #[attributes.headers.correlationId] Other SFDC error flow ended::::#[payload]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="fef4bb42-dd81-4ed1-8440-9a78dc19ea59" expression="#[vars.errorResponse == null]" message="#[vars.errorResponse.errorMessage default error.description]" />
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="240fbeed-d45b-4958-b30e-ba2e8c86d541" />
+		<logger level="INFO" doc:name="endLogger" doc:id="e1578c6c-d924-44a6-9f22-6a64e6c31de3" message="CorrelationID: #[attributes.headers.correlationId] End flow delete record successfully ::#[sizeOf(payload)]" />
+	</sub-flow>
+	<!-- [STUDIO:"sfdc-error-create-impl-subflow"]<sub-flow name="sfdc-error-create-impl-subflow" doc:id="da4f8bdb-f7af-4783-9ed3-ba50cfe7742d" >
+		<logger level="INFO" doc:name="startLogger" doc:id="6bfe5f77-bb36-4884-bed4-2de265eea9d9" message="Start create record flow from ::#[payload.objectName&#93;" />
+		<ee:transform doc:name="Transform Message" doc:id="97e9482a-c178-45ed-89ec-fa416e2a462d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+[
+    {
+        "MuleSoft_Id__c": "23444rddfed33",//MuleSoft_Id__c
+        "Event_Id_c__c": "24542csd54", //this is also dynamic value need to pass in future(optional) // Event_Id__c
+        "Source_Name_c__c": "infor",// Source_Name__c
+        "Target_Name_c__c": "salesforce", // Target_Name__c
+        "Error_Code_c__c": "400", //(optional) // Error_Code__c
+        "Error_Message__c": "error message logged", // Error_Message__c
+        //"Error_Timestamp__c": "2026-02-27T06:30:00" as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"}
+ 
+    }
+&#93;&#93;&#93;></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="setRequest" doc:id="838b372c-9f4e-406f-bf47-6113cecc549e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+payload&#93;&#93;></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="objectName" ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+payload.objectName&#93;&#93;></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="f0d03c6a-13fc-48df-b0ff-004ca4156b79">
+			<try doc:name="Try" doc:id="febb85c6-934e-4a48-a697-8ddee5004ee5">
+				<salesforce:create type="Error_Log__c" doc:name="createRecord" doc:id="473b339c-dad4-404b-872e-7d89d5f3167a" config-ref="Salesforce_Config"/>
+				<error-handler>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f6225708-714e-4b00-9755-71523959d293" type="SALESFORCE:CONNECTIVITY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="09977d56-2e12-4298-8f9b-bc9e319881a7" message="Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="cb347913-25c2-4cfe-9930-28c7adba530d">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}&#93;&#93;></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="a1da46f3-8e70-48f0-bebf-0bfbd2ebeb2c" message="Connectivity sfdc error flow ended::::#[payload&#93;" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0f1cea8a-9964-428e-a366-8be9a3b19470" type="ANY">
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="64d29aa0-5ef9-407c-8df9-58e700fb4a01" message="Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="4aebe768-2320-4f02-bb5a-2a6245e6464f">
+							<ee:message>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}&#93;&#93;></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="583eeb29-7280-4e1b-8389-8bc9c8d08e04" message="Other SFDC error flow ended::::#[payload&#93;" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="32977ad9-9375-4fa1-924b-5fea64a097b2" expression="#[vars.errorResponse == null&#93;" message="#[vars.errorResponse.errorMessage default error.description&#93;" />
+		<ee:transform doc:name="setResponse" doc:id="ca49a0f9-9013-4d8a-8110-b3c33a2d868d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+payload&#93;&#93;></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="a3d10906-bcae-4e5f-9e03-b69c8650672a" message="End flow create record successfully ::#[sizeOf(payload)&#93;" />
+	</sub-flow> [STUDIO] -->
+	<!-- [STUDIO:"sfdc-create-publishEvent-impl-subflow"]<sub-flow name="sfdc-create-publishEvent-impl-subflow" doc:id="de00dcfb-5e69-4a70-b278-ad6ce0116ea8" >
+		<logger level="INFO" doc:name="startLogger" doc:id="430aaffb-f41e-4f81-b974-0a5b6804ed40" message="CorrelationID: #[attributes.headers.correlationId&#93; Start create record flow from ::#[payload.objectName&#93;" />
+		<ee:transform doc:name="setRequest" doc:id="5b2fa471-330f-43a6-a76e-fca5432793fd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+payload.payload&#93;&#93;></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="objectName" ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+payload.objectName&#93;&#93;></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="fd903a7e-e69e-49a0-a90d-cd5f74a664cc" >
+			<try doc:name="Try" doc:id="b0d7b9e6-a75f-402a-a42b-8fe8d265eb68" >
+				<salesforce:create type="LogEntryEvent__e" doc:name="createRecord" doc:id="0b8eb36c-8dc6-4693-8f48-b65fbdf1568b" config-ref="Salesforce_Config_Sciton" />
+				<salesforce:publish-platform-event-message doc:name="Publish platform event message" doc:id="dc269b4a-73f2-4726-80f6-79d157a21e4b" config-ref="Salesforce_Config_Sciton" platformEventName="Log Entry Event (LogEntryEvent__e)"/>
+				<error-handler >
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e7879e0c-10a0-43ea-8d44-3f0e5847dcc1" type="SALESFORCE:CONNECTIVITY" >
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="3226b42f-a0e4-4997-8df7-467f3ae97f34" message="CorrelationID: #[attributes.headers.correlationId&#93; Connectivity sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="d26e454e-e766-4e35-93d7-558fa7941912" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}&#93;&#93;></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="bf4b20c9-f0ef-4bc7-9aed-57ce030dedf6" message="CorrelationID: #[attributes.headers.correlationId&#93; Connectivity sfdc error flow ended::::#[payload&#93;" />
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="74d9fbd5-2aa6-460a-bdf8-2c4310c56df5" type="ANY" >
+						<logger level="INFO" doc:name="errorStartLogger" doc:id="0c837b1b-d688-4494-b6c3-b23336045530" message="CorrelationID: #[attributes.headers.correlationId&#93; Other sfdc error flow started::::" />
+						<ee:transform doc:name="errorResponse" doc:id="fd635a66-b0f7-4cca-baaf-e1b6338734d3" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}&#93;&#93;></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<logger level="INFO" doc:name="errorEndLogger" doc:id="09dc5056-1a47-4487-95c1-e9a307f25c9a" message="CorrelationID: #[attributes.headers.correlationId&#93; Other SFDC error flow ended::::#[payload&#93;" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</until-successful>
+		<validation:is-true doc:name="Check for errors other than connectivity errors" doc:id="a8790b71-be11-44e4-865c-2443aea28ed2" expression="#[vars.errorResponse == null&#93;" message="#[vars.errorResponse.errorMessage default error.description&#93;" />
+		<ee:transform doc:name="setResponse" doc:id="abd8dd61-f7ca-45cd-9c20-8c9648998996" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+payload&#93;&#93;></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="endLogger" doc:id="83554a25-effc-4945-b864-4e7a3b93cc7b" message="CorrelationID: #[attributes.headers.correlationId&#93; End flow create record successfully ::#[sizeOf(payload)&#93;" />
+	</sub-flow> [STUDIO] -->
+</mule>

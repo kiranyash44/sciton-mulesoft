@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<settings>
+ 
+  <pluginGroups>
+<pluginGroup>org.mule.tools</pluginGroup>
+</pluginGroups>
+ 
+  <servers>
+<server>
+<id>Repository</id>
+<username>~~~Client~~~</username>
+<password>638f386717cd48d4ae9c87ecc46ebfe5~?~e21F6AA8c8c94Bbf98C7771141aBd2d6</password>
+</server>
+</servers>
+ 
+</settings>

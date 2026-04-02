@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<flow name="sciton-csi-papiFlow" doc:id="b3c49e10-ca1b-464e-805d-2ed04157c325" initialState="stopped">
+		<!-- [STUDIO:"triggerEvery30Minutes"]<scheduler doc:name="triggerEvery30Minutes" doc:id="fed587f9-e3e3-4477-8337-6c693ac05865" >
+			<scheduling-strategy >
+				<cron expression="0 0/30 * 1/1 * ? *" />
+			</scheduling-strategy>
+		</scheduler> [STUDIO] -->
+		<set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;correlationId]" doc:name="setCorrelationId" doc:id="a98b1b22-aada-47e4-a691-70eab2b5e3ad" variableName="correlationId"/>
+		<logger level="INFO" doc:name="startLogger" doc:id="20cd6cc8-6132-4abf-9633-1a92fb826ec2" message="scheduler flow started::#[vars.correlationId]" />
+		<os:retrieve doc:name="retrieveLastModifiedDate" doc:id="5bb63657-1893-43e0-b581-eb4269b35a3a" key="lastModifiedDate" objectStore="Object_store" target="lastModifiedDate">
+			<os:default-value ><![CDATA[#[p('lastModifiedDate')]]]></os:default-value>
+		</os:retrieve>
+		<ee:transform doc:name="setRequest" doc:id="20086190-cd9f-4730-81e8-d0a385143b5c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "query": p('objectQuery'),
+    "payload": p('objectPayload') ++ vars.lastModifiedDate,
+    "objectName": p('objectName')
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="url" ><![CDATA[%dw 2.0
+output application/java
+---
+"https://sciton-sfdc-sapi-tgm49c.5sc6y6-3.usa-e2.cloudhub.io/api/sfdc"]]></ee:set-variable>
+				<ee:set-variable variableName="method" ><![CDATA["GET"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="sfdc-common-api-subflow" doc:id="ed1fff54-6781-4ae5-b290-d4d239f941c5" name="sfdc-common-api-subflow" />
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="3084450a-bdc3-4471-85dd-b707814ff1c1" />
+		<logger level="INFO" doc:name="sfdcResponseLogger" doc:id="249f061b-5a00-4dfd-8ba0-d431e2a0a556" message="sfdc response data::::#[sizeOf(payload)] || #[vars.correlationId]" />
+		<os:store doc:name="storeLastModifiedDate" doc:id="4023915c-7676-4c32-8110-9f1ebe4f87e0" key="lastModifiedDate" objectStore="Object_store">
+			<os:value ><![CDATA[#[%dw 2.0
+output application/json
+---
+now() as DateTime {format: "YYYY-MM-dd'T'hh:mm:ss.SSS'Z'"}]]]></os:value>
+		</os:store>
+		<logger level="INFO" doc:name="endLogger" doc:id="e4ba773d-eca1-43e8-9614-b602d43b2ff5" message="scheduler flow ended::#[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+	</flow>
+</mule>

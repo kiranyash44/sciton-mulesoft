@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<error-handler name="error-handling-sapi" doc:id="fec7b0df-cdc6-4f99-886f-a1a1e1b3602b" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="3e9848d3-b5f8-40d8-8ea7-8f9ac21cd27d" type="ANY">
+			<logger level="ERROR" doc:name="errorStartLogger" doc:id="30586bf9-8bb0-4222-b633-2f75eef0fd68" message="CorrelationID: #[attributes.headers.correlationId] Sapi error flow started::::"/>
+			<ee:transform doc:name="setResponse" doc:id="50f3cda0-266e-4d25-b2d0-6ae9c12b7e1f" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorMessage: error.errorMessage,
+	errorType: error.errorType,
+	description: error.description
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="ERROR" doc:name="errorEndLogger" doc:id="60dbd054-dad0-414c-b6a1-d3d2c4702b23" message="CorrelationID: #[attributes.headers.correlationId] Sapi error flow ended::::#[payload]" />
+		</on-error-propagate>
+	</error-handler>
+	<error-handler name="error-handling-api-kit" doc:id="60c24e65-d15e-48a1-a0f0-78ba4983b33c" >
+	<on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT BAD_REQUEST" doc:id="4df9cbbc-1f63-4a55-8c9b-f2f33ba4016c" message="CorrelationID: #[attributes.headers.correlationId] BAD_REQUEST response... #[payload]" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT NOT FOUND" doc:id="2413bfb6-eedc-4ffd-99ad-31b3d9710450" message="CorrelationID: #[attributes.headers.correlationId] APIKIT NOT FOUND response... #[payload]" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT Method Not Allowed" doc:id="8af0de7f-7a5f-40e3-98d8-3e67d236382f" message="CorrelationID: #[attributes.headers.correlationId] APIKIT METHOD NOT ALLOWED response... #[payload]" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT Not Acceptable" doc:id="23a83f49-378f-4415-bf6b-bde7463d3f6a" message="CorrelationID: #[attributes.headers.correlationId] APIKIT NOT ACCEPTABLE response... #[payload]" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT UNSUPPORTED MEDIA TYPE" doc:id="8208908c-c10f-4f05-84d3-185e183df877" message="CorrelationID: #[attributes.headers.correlationId] APIKIT UNSUPPORTED MEDIA TYPE response... #[payload]" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<logger level="ERROR" doc:name="APIKIT NOT IMPLEMENTED" doc:id="2659a5fb-9841-4d37-aa63-277de940ee8c" message="CorrelationID: #[attributes.headers.correlationId] APIKIT NOT IMPLEMENTED response... #[payload]" />
+            
+</on-error-propagate>
+	
+</error-handler>
+	<sub-flow name="error-handling-errorRecord-system-flow" doc:id="c83305ee-ca23-47b4-b7d0-70dfd0d86936" >
+		<ee:transform doc:name="setErrorRecordRequest" doc:id="40da3db1-f9db-4daa-8f64-5383672dbc75" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+"query": "",
+"payload":[
+    {
+        "MuleSoft_Id__c": vars.correlationId,
+        "Event_Id_c__c": vars.caseId default "2454254", //this is also dynamic value need to pass in future
+        "Source_Name_c__c": vars.sourceId,
+        "Target_Name_c__c": vars.targetId,
+        "Error_Code_c__c": payload.errorCode,
+        "Error_Message__c": payload.errorMessage
+        //"creationDate": now()
+    }
+],
+"objectName": "Error_Log__c"
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="method" ><![CDATA[%dw 2.0
+output application/java
+---
+"POST"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="ERROR" doc:name="sfdcErrorLogger" doc:id="92c68ec6-79c2-40e7-a7b4-60b994460d87" message="CorrelationID: #[attributes.headers.correlationId] logging the sfdc error infor:::#[payload]" />
+		<flow-ref doc:name="post errorRecord Flow Reference" doc:id="19e4368d-3dff-4a97-b7fd-96d6ca011c80" name="post:\errorRecord:application\json:sciton-sfdc-sapi-config"/>
+		<set-payload value="#[output json&#10;---&#10;payload]" doc:name="setResponse" doc:id="4c79127d-4080-482a-b14e-fd6d34c6d01c" />
+	</sub-flow>
+</mule>

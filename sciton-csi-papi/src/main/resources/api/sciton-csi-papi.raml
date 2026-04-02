@@ -1,0 +1,147 @@
+#%RAML 1.0
+title: sciton-csi-papi
+description: creating object in CSI system
+baseUri: http://localhost:8081/api/*
+
+/customer:
+  post:
+    body:
+      application/json:
+        example: !include examples/genaric-common-request.json
+    responses:
+      201:
+        body:
+          application/json:
+            example: !include examples/sfdc-create-update-response.json
+  /{customerId}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: !include examples/get-sfdc-response.json
+    put:
+      body:
+        application/json:
+          example: !include examples/genaric-common-request.json
+      responses:
+        200:
+          body:
+            application/json:
+              example: !include examples/sfdc-create-update-response.json
+
+/case:
+  post:
+    body:
+      application/json:
+        example: {}
+    responses:
+      201:
+        body:
+          application/json:
+            example: {}
+  /{caseId}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: {}
+                
+    patch:
+      body:
+        application/json:
+          example: {}
+      responses:
+        200:
+          body:
+            application/json:
+              example: {}
+            
+  /sync:
+    post:
+      body:
+        application/json:
+          example: {}
+      responses:
+        201:
+          body:
+            application/json:
+              example: {} 
+    /{caseId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: {}
+      patch:
+        body:
+          application/json:
+            example: {}
+        responses:
+          200:
+            body:
+              application/json:
+                example: {}
+        
+  /search:
+    get:
+      queryParameters:
+        filter:
+          type: string
+          description: filter like name:sam
+      responses:
+        200:
+          body:
+            application/json:
+              example: {}
+
+/workOrder:
+  post:
+    body:
+      application/json:
+        example: {}
+    responses:
+      201:
+        body:
+          application/json:
+            example: {}
+  /{workOrderId}:
+    patch:
+      body:
+        application/json:
+          example: {}
+      responses:
+        200:
+          body:
+            application/json:
+              example: {}
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: {}
+
+/invoice:
+  post:
+    body:
+      application/json:
+        example: {}
+    responses:
+      201:
+        body:
+          application/json:
+            example: {}
+            
+/product:
+  post:
+    body:
+      application/json:
+        example: {}
+    responses:
+      201:
+        body:
+          application/json:
+            example: {}   
