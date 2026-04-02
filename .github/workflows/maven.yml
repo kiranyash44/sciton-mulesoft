@@ -19,7 +19,7 @@ on:
           - Prod
 
 env:
-  DEFAULT_APPS: 'sciton-fsl-papi-v1,sciton-csi-sapi-v1,sciton-sfdc-sapi-v1'
+  DEFAULT_APPS: 'sciton-csi-papi,sciton-sfdc-sapi'
   
 jobs:
 
