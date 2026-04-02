@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <flow name="sciton-csi-papi-main">
+        <http:listener config-ref="sciton-csi-papi-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <ee:transform doc:name="commonVars" doc:id="b75cd721-3269-447f-81d5-ac92057845ea" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="url" ><![CDATA[%dw 2.0
+output application/java
+---
+"https://sciton-sfdc-sapi-o54os3.jkj2gz.usa-e2.cloudhub.io/api/sfdc"]]></ee:set-variable>
+				<ee:set-variable variableName="correlationId" ><![CDATA[%dw 2.0
+output application/java
+---
+correlationId]]></ee:set-variable>
+				<ee:set-variable variableName="errorurl" ><![CDATA[%dw 2.0
+output application/java
+---
+"https://sciton-sfdc-sapi-o54os3.jkj2gz.usa-e2.cloudhub.io/api/errorRecord"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<apikit:router config-ref="sciton-csi-papi-config" />
+        <error-handler ref="error-handling-api-kit" />
+    </flow>
+    <flow name="post:\customer:application\json:sciton-csi-papi-config">
+        <flow-ref doc:name="sfdc-create-impl-sub-flow" doc:id="3381723c-4dd5-4d30-8e8c-329d2233a95c" name="sfdc-create-impl-sub-flow" />
+        <error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="get:\customer\(customerId):sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="customerId">attributes.uriParams.'customerId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="sfdc-get-impl-sub-flow" doc:id="b9ecdee8-52ef-47f5-a1ee-08e6bf991c24" name="sfdc-get-impl-sub-flow" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="put:\customer\(customerId):application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="customerId"><![CDATA[output json
+---
+{
+	Id: attributes.uriParams.'customerId'
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="sfdc-update-impl-sub-flow" doc:id="e6cf6da6-bdf2-4b06-b9d7-99e27f30a1e0" name="sfdc-update-impl-sub-flow" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="post:\case:application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setLogVariables" doc:id="0d687ea4-fe25-4201-a85a-fff40668af8f">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton case create flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : "",
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payloa]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="4943b3a8-d8af-4304-9bf2-295539a15893" message="case create flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="get:\case\(caseId):sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="caseId">attributes.uriParams.'caseId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="e57164ec-827d-478f-b85a-3f0fe9422db5" message="case get flow started::::#[vars.caseId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="2ac94ac4-c016-4e37-ab46-3755ddde97bb" message="case get flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="patch:\case\(caseId):application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="caseId">attributes.uriParams.'caseId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="c45cfc4f-a219-46ee-8c38-cf0c4879f414" message="case update flow started::::#[vars.caseId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="c07bbb22-8d5c-4128-8c9a-211a7a1b6e53" message="case update flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="post:\workOrder:application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setLogVariables" doc:id="6e8d3ee1-016f-4bf1-ba5c-a257ed26e3ba">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton workOrder create flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {requestPayload: payload},
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="9d31b728-f4d4-4c0a-8b05-5b1677b45b71" name="create-Record-process-flow" target="recordResponse" />
+		<flow-ref doc:name="info-log-processing-flow" doc:id="d63624b0-cefc-462f-8dcb-0d0f5b42034a" name="log-processing-flow" />
+		<ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payloa]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <ee:transform doc:name="setLogVariables" doc:id="43e5b44a-f16a-44d5-8bee-f02fd31eae18">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "End",
+	flow: flow.name,
+	message : "Sciton workOrder create flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : {targetResponse:payload},
+	logLevel: p('logLevel'),
+	status: "Completed"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="ec5b2d89-e8f9-4605-bff2-826ee42fcdb7" name="create-Record-process-flow" target="recordResponse" />
+		<flow-ref doc:name="info-log-processing-flow" doc:id="0380f9f8-59b3-4b48-96f9-21fa610e1add" name="log-processing-flow" />
+        <logger level="INFO" doc:name="endLogger" doc:id="37d8e547-2aee-47e6-afd9-ea7804832bc6" message="workOrder create flow ended::::#[payload]  || #[vars.correlationId]" />
+        <error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="patch:\workOrder\(workOrderId):application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="workOrderId">attributes.uriParams.'workOrderId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="560fb205-299a-4f2a-9ba0-b596f55decc7" message="workOrder update flow started::::#[vars.workOrderId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="987dbda1-ba13-48fa-9fd6-bafe2165863d" message="workOrder update flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="get:\workOrder\(workOrderId):sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="workOrderId">attributes.uriParams.'workOrderId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="208d1346-1f3e-494a-97a1-821c9774c7e9" message="workOrder get flow started::::#[vars.workOrderId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse" doc:id="9f2099ec-69b9-4a97-a7ec-a7b1f1d39802">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="7958b3f7-8985-452a-aa5f-544880942a9f" message="workOrder get flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="get:\case\sync\(caseId):sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="caseId">attributes.uriParams.'caseId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="92cfedf2-1a8d-411f-8cc7-b84a61dfb913" message="case sync get flow started::::#[vars.caseId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="c4b131a5-dc40-4339-b694-41d9749210be" message="case sync get flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="patch:\case\sync\(caseId):application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setParams">
+            <ee:variables>
+                <ee:set-variable variableName="caseId">attributes.uriParams.'caseId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="startLogger" doc:id="6835d5af-b8ce-468f-a63e-18fc098d8698" message="case sync update flow started::::#[vars.caseId]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="59db20a1-f903-46eb-b873-27a137ee6450" message="case sync update flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="post:\case\sync:application\json:sciton-csi-papi-config">
+        <ee:transform doc:name="setLogVariables" doc:id="d4118af5-eea7-4fdb-8eec-e080bb396938">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Start",
+	flow: flow.name,
+	message : "Sciton case create flow Process API Started" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {requestPayload: payload},
+	logLevel: p('logLevel'),
+	status: "Started"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="803561e1-8540-4e4b-b551-f0175abbb728" name="create-Record-process-flow" target="recordResponse" />
+		<flow-ref doc:name="info-log-processing-flow" doc:id="aee6415e-7cec-484e-823d-75c736febb6a" name="log-processing-flow" />
+        <ee:transform doc:name="setResponse">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"success": 200,
+	"message": "Case created Successfully!"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<raise-error doc:name="CASE:UNAUTHORIZED" doc:id="19b85d0d-daff-4682-b2e8-426ddaa039da" type="CASE:UNAUTHORIZED" description="Invalid username and password to process the Request" />
+		<ee:transform doc:name="setLogVariables" doc:id="a74f84f9-9088-4bd0-9e25-fb0bdf849424">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "End",
+	flow: flow.name,
+	message : "Sciton case create flow Process API Ended" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".end",
+	additionalInfo : {targetResponse:payload},
+	logLevel: p('logLevel'),
+	status: "Completed"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="create-Record-process-flow" doc:id="f44c7b25-85ac-409a-93ca-1507c958b8a8" name="create-Record-process-flow" target="recordResponse" />
+		<flow-ref doc:name="info-log-processing-flow" doc:id="0a028899-578e-43e0-9838-53451b42983b" name="log-processing-flow" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="get:\case\search:sciton-csi-papi-config">
+        <logger level="INFO" doc:name="startLogger" doc:id="6df483eb-03fc-4311-a4ac-5038a927a950" message="case sync search flow started::::#[payload]  || #[vars.correlationId]" />
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="d9143489-9e87-4fb0-8ca6-c093ce5e85be" message="case sync search flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="post:\invoice:application\json:sciton-csi-papi-config">
+        <logger level="INFO" doc:name="startLogger" doc:id="84f0486c-61f0-4328-bc30-3adb9b673da7" message="invoice create flow started::::#[payload]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse" doc:id="b4c81921-2922-4c18-ba2e-5f3b92fa8020">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="67759f04-58bb-46bd-b2e2-f6a108272742" message="invoice create flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+    <flow name="post:\product:application\json:sciton-csi-papi-config">
+        <logger level="INFO" doc:name="startLogger" doc:id="1adf6ec5-6c85-44ce-98c4-6fdc6d79bf15" message="product create flow started::::#[payload]  || #[vars.correlationId]" />
+        <ee:transform doc:name="setResponse" doc:id="3ddbb8be-f4f7-4c8b-8711-36a872b835e0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="endLogger" doc:id="b82d1263-b458-473e-a272-b75246afc9f4" message="product create flow ended::::#[payload]  || #[vars.correlationId]" />
+		<error-handler ref="error-handling-papi" />
+    </flow>
+</mule>

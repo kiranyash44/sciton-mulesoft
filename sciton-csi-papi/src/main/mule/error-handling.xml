@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<error-handler name="error-handling-papi" doc:id="fec7b0df-cdc6-4f99-886f-a1a1e1b3602b" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="3e9848d3-b5f8-40d8-8ea7-8f9ac21cd27d" type="HTTP:BAD_GATEWAY, HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:FORBIDDEN, HTTP:INTERNAL_SERVER_ERROR, HTTP:METHOD_NOT_ALLOWED, HTTP:NOT_ACCEPTABLE, HTTP:NOT_FOUND, HTTP:RETRY_EXHAUSTED, HTTP:TOO_MANY_REQUESTS, HTTP:UNAUTHORIZED, HTTP:UNSUPPORTED_MEDIA_TYPE">
+			<ee:transform doc:name="setResponse" doc:id="50f3cda0-266e-4d25-b2d0-6ae9c12b7e1f">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "HTTP-400",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="2179275c-b983-49db-8b6d-6546b756450f">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="ebee2309-5291-4ed6-ac32-8cfdbfa03759" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="1cf782d3-dd48-40d8-b8a1-abb960e5b7c6" name="log-processing-flow" target="logResponse"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="aa4ab9c7-cac7-4b23-8434-8139e5b42567" type="SALESFORCE:CONNECTIVITY, SALESFORCE:INSUFFICIENT_PERMISSIONS, SALESFORCE:INVALID_INPUT, SALESFORCE:INVALID_RESPONSE, SALESFORCE:LIMIT_EXCEEDED, SALESFORCE:MUTUAL_AUTHENTICATION_FAILED, SALESFORCE:NOT_FOUND, SALESFORCE:OPERATION_NOT_SUPPORTED, SALESFORCE:RETRY_EXHAUSTED, SALESFORCE:TIMEOUT, SALESFORCE:UNAVAILABLE">
+			<ee:transform doc:name="setResponse" doc:id="91fa7fc8-3daf-456a-a171-86441b895eb3" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "SF-500",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="230ee700-07ef-4c03-9f97-bb3a1d043caf">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="d335030d-4184-484b-8402-277c4c8830ba" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="0ad03af1-7a5c-405c-bcbf-79a7e5af5d04" name="log-processing-flow" target="logResponse"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a3b07ffa-4568-4d4e-a3e4-a5cd5bcc381b" type="CASE:UNAUTHORIZED">
+			<ee:transform doc:name="setResponse" doc:id="a860c425-82c9-4d33-9325-9bedd2d1330b" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "SF-401",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="45ecc6f4-5c07-4dfa-83d6-3ceb4775e37c">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="0c095b40-b6d8-438d-b64c-7c5fc7f238e9" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="bc083a13-3d7a-47ef-a9b5-a6cd54de84f0" name="log-processing-flow" target="logResponse"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="92a0976e-09f8-4409-bbe7-753c54633d32" type="ANY">
+			<ee:transform doc:name="setResponse" doc:id="634f3853-a299-4668-a9fb-8076aa7bdf17">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "UN-500",
+	errorMessage: error.exception.message,
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="30bb6b35-ecd3-4c3e-8adf-7b3b134d5785">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="617b4788-84e3-490a-af49-9b108deccb17" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="117f4e61-29be-4be2-9224-ae2e5a28d828" name="log-processing-flow" target="logResponse"/>
+		</on-error-propagate>
+	</error-handler>
+	<error-handler name="error-handling-api-kit" doc:id="60c24e65-d15e-48a1-a0f0-78ba4983b33c" >
+	<on-error-propagate type="APIKIT:BAD_REQUEST">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[output application/json
+---
+{
+	errorCode: "APIKIT-400",
+	errorMessage: "Bad request",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[400]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="19dd4abf-e87c-420f-bdf3-a1f0b114a22d">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="ff5408d1-6566-4941-9369-32937420e7b0" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="43600eb0-a2a2-4991-ba24-587d32d9e906" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[output application/json
+---
+{
+	errorCode: "APIKIT-404",
+	errorMessage: "Resource not found",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="807203ae-e61f-495e-af4d-6475abc03f15">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="2fe929a8-277b-42e4-bded-0438a9cf1051" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="f4ad6fdb-b342-46c4-a5b0-90a4560761c5" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "APIKIT-405",
+	errorMessage: "Method not allowed",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[405]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="f1943d70-d68c-4c8b-8d59-a1d27a798b02">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="e0306550-75e8-4db4-a9a8-bf9d8654838a" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="6dc0ae6a-d4b1-4f1a-ac5a-f978a8147e1f" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "APIKIT-406",
+	errorMessage: "Not acceptable",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[406]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="525c6ad8-c7c9-4c93-a37f-7d2324d013be">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="43e7bccd-48d5-45ed-9c9e-1f6a19027f42" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="67cd1189-0e23-4e10-aa4f-a7f7475183cd" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "APIKIT-415",
+	errorMessage: "Unsupported media type",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[415]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="9b9e3717-0585-4b96-b89b-d6a381de9350">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="140ac7bb-e15e-4467-b4c6-786c3767d416" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="b15ef5b7-9117-4492-a8be-ece1d74111d4" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+			<ee:transform doc:name="setResponse">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	errorCode: "APIKIT-501",
+	errorMessage: "Not Implemented",
+	errorType: error.errorType.identifier default error.errorType.parentErrorType.identifier,
+	description: error.failingComponent,
+	status: "Failure"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[501]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<ee:transform doc:name="setLogVariables" doc:id="a65a252e-38f7-4725-8320-955c34e9ab0a">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="logger"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Error",
+	flow: flow.name,
+	errorCode: payload.errorCode,
+	errorMessage : payload.errorMessage,
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {errorResponse: payload},
+	logLevel: p('errorLogLevel'),
+	status: "Failed"
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="create-Record-process-flow" doc:id="3587de6a-8cb8-4909-8356-f3f59dc766f1" name="create-Record-process-flow" target="sfdcrecordResponse"/>
+			<flow-ref doc:name="log-processing-flow" doc:id="5a42a337-6b24-4bcb-83f4-8ee3238e58de" name="log-processing-flow" target="logResponse"/>
+            
+</on-error-propagate>
+	
+</error-handler>
+	<sub-flow name="create-Record-process-flow" doc:id="dfab632c-5286-4b64-a19f-2b4108cbd33e" >
+		<ee:transform doc:name="setRecordRequest" doc:id="70be591f-9004-4c44-bd72-bc974da0988e" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="method" ><![CDATA[%dw 2.0
+output application/java
+---
+"POST"]]></ee:set-variable>
+				<ee:set-variable variableName="sfdcRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+"query": "",
+"payload":[
+    {
+        "MuleSoft_Id__c": vars.correlationId,
+        "Source_Name_c__c": vars.logger.source,
+        "Target_Name_c__c": vars.logger.target,
+        ("Error_Code_c__c": vars.logger.errorCode) if(vars.logger.errorCode != null),
+        ("Error_Message__c": write(vars.logger.additionalInfo,'java')) if(vars.logger.errorMessage != null),
+        "Object_Type__c": "Account",
+        "Status__c": vars.logger.status,
+        ("Message__c": write(vars.logger.additionalInfo,'java')) if(vars.logger.message != null),
+        "logLevel__c": vars.logger.logLevel
+    }
+],
+"objectName": "Error_Log__c"
+}]]></ee:set-variable>
+				<ee:set-variable variableName="infoFlag" ><![CDATA[%dw 2.0
+output application/java
+---
+p('infoFlag')]]></ee:set-variable>
+				<ee:set-variable variableName="logger" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	correlationId : vars.correlationId,
+	tracePoint: "Middle",
+	flow: flow.name,
+	message : "Sciton Logger record creation flow through the Process API" default "",
+	source : "CSI(Infor)",
+	target : "Salesforce",
+	timeStamp : now(),	
+	category: flow.name ++ ".start",
+	additionalInfo : {requestPayload: payload},
+	logLevel: p('logLevel'),
+	status: "In Progress"
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="log-processing-flow" doc:id="e2079c43-f6ae-4391-a7b7-b6e595bdb2cc" name="log-processing-flow" target="logResponse"/>
+		<http:request method="#[vars.method]" doc:name="sfdcRecordSapiRequest" doc:id="bfc74a5b-2595-4459-92ac-a92e5cf21fc3" url="#[vars.errorurl]" sendBodyMode="ALWAYS" target="sfdcResponse">
+			<http:body ><![CDATA[#[output json
+---
+vars.sfdcRequest]]]></http:body>
+		</http:request>
+	</sub-flow>
+</mule>

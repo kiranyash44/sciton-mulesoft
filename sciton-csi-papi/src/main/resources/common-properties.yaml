@@ -1,0 +1,11 @@
+objectName: "Account"
+objectQuery: "Select Id,Name, Industry, Type,BillingAddress, ShippingAddress,Phone,website From"
+objectPayload: "where LastModifiedDate >= "
+
+
+lastModifiedDate: "2000-01-21T00:00:00.000Z"
+ 
+logLevel: "INFO"
+errorLogLevel: "ERROR"
+
+

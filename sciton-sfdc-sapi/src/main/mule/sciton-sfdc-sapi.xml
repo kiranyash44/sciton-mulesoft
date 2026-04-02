@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+    <flow name="sciton-sfdc-sapi-main">
+        <http:listener config-ref="sciton-sfdc-sapi-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <logger level="INFO" doc:name="Logger" doc:id="1965afca-47f6-485e-89f0-e8f8318153dc" message="entered into SAPI.... #[payload]" />
+        <apikit:router config-ref="sciton-sfdc-sapi-config" />
+        <error-handler ref="error-handling-api-kit" />
+    </flow>
+    <flow name="put:\sfdc:application\json:sciton-sfdc-sapi-config">
+        <flow-ref doc:name="sfdc-update-impl-subflow" doc:id="512068e2-af81-4636-8813-1e57c9adac7c" name="sfdc-update-impl-subflow" />
+        <error-handler ref="error-handling-sapi" />
+    </flow>
+    <flow name="delete:\sfdc:application\json:sciton-sfdc-sapi-config">
+        <flow-ref doc:name="sfdc-delete-impl-subflow" doc:id="352063f7-5a7a-439d-b634-e2420f41ca2e" name="sfdc-delete-impl-subflow" />
+        <error-handler ref="error-handling-sapi" />
+    </flow>
+    <flow name="get:\sfdc:application\json:sciton-sfdc-sapi-config">
+        <flow-ref doc:name="sfdc-get-impl-subflow" doc:id="d21101ae-e4d6-4dde-83fa-616e7ad8d986" name="sfdc-get-impl-subflow" />
+        <error-handler ref="error-handling-sapi" />
+    </flow>
+    <flow name="post:\sfdc:application\json:sciton-sfdc-sapi-config">
+        <flow-ref doc:name="sfdc-create-impl-subflow" doc:id="a57008e3-f065-489b-b204-abceb6a051fd" name="sfdc-create-impl-subflow" />
+        <error-handler ref="error-handling-sapi" />
+    </flow>
+    <flow name="post:\errorRecord:application\json:sciton-sfdc-sapi-config" doc:id="98eab634-5e2f-45e6-9f44-0a5a0b9ad328">
+		<flow-ref doc:name="sfdc-create-impl-subflow" doc:id="f8eb6f07-363d-4935-bc32-d8b4e9a7e7a0" name="sfdc-create-impl-subflow"/>
+    </flow>
+</mule>

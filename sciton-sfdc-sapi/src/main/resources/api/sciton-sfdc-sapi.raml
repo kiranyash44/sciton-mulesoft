@@ -1,0 +1,63 @@
+#%RAML 1.0
+title: sciton-sfdc-sapi
+description: sfdc CURD opertaion
+version: v1
+baseUri: http://localhost:8081/v1/sfdc
+
+/sfdc:
+  description: fetching object details in sfdc
+  get:
+    body:
+      application/json:
+        example: !include examples/generic-common-request.json
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/get-sfdc-response.json
+
+  post:
+    description: creating record in sfdc
+    body:
+      application/json:
+        example: !include examples/generic-common-request.json
+    responses:
+      201:
+        body:
+          application/json:
+            example: !include examples/sfdc-create-update-response.json
+
+  put:
+    description: update record in sfdc
+    body:
+      application/json:
+        example: !include examples/generic-common-request.json
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/sfdc-create-update-response.json
+
+  delete:
+    description: delete record in sfdc
+    body:
+      application/json:
+        example: !include examples/generic-common-request.json
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/delete-sfdc-response.json
+              
+/errorRecord:
+  post:
+    description: creating record in sfdc
+    body:
+      application/json:
+        example: !include examples/generic-common-errorrequest.json
+    responses:
+      201:
+        body:
+          application/json:
+            example: !include examples/sfdc-create-update-errorresponse.json
+       
