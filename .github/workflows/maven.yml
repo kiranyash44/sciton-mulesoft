@@ -150,6 +150,6 @@ jobs:
         run: |
           cd  ${{ matrix.app }}
           mvn -B -ntp -T2C versions:set -DnewVersion=$VERSION -s ../.github/maven/settings.xml
-          mvn -B -ntp -T2C clean deploy -Dproject.version=$VERSION -DskipMunitTests -s ../.github/maven/settings.xml && mvn -B -ntp -T1C clean deploy -P${{ needs.set-apps.outputs.mule_env }} -Dproject.version=$VERSION -DmuleDeploy -Dmule.env=${{ needs.set-apps.outputs.mule_env }} -Dcloudhub.environment=${{ needs.set-apps.outputs.cloudhub_env }}  -DskipMunitTests -s ../.github/maven/settings.xml || exit 1
+          mvn -B -ntp -T2C clean deploy -Dproject.version=$VERSION -DskipMunitTests -s ../.github/maven/settings.xml && mvn -B -ntp -T1C clean deploy -P${{ needs.set-apps.outputs.mule_env }} -Dproject.version=$VERSION -DmuleDeploy -Dmule.env=${{ needs.set-apps.outputs.mule_env }}  -DskipMunitTests -s ../.github/maven/settings.xml || exit 1
         env:
           VERSION: ${{ needs.set-version.outputs.version }}
